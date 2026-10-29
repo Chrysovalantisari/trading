@@ -1,0 +1,46 @@
+name: trading-alerts
+
+# Runs a single market scan every ~15 minutes on GitHub's servers (free).
+# Telegram credentials come from repo Secrets, never from the code.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}      # lets you trigger a scan manually from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trading-alerts
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # persist dedup state + news cache between runs (mutable-cache pattern)
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: |
+            alerts_state.json
+            news_cache.json
+          key: alert-state-${{ github.run_id }}
+          restore-keys: |
+            alert-state-
+
+      - name: Scan and alert
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python alerts.py

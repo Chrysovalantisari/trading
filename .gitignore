@@ -1,0 +1,8 @@
+.env
+.venv/
+data/
+__pycache__/
+*.pyc
+alerts.log
+alerts_state.json
+news_cache.json
