@@ -32,8 +32,9 @@ def volume_context(df15):
 
 # ---------------------------------------------------------------- 2. funding
 def funding_context(ex, symbol):
+    from scanner import resolve_symbol
     try:
-        fr = ex.fetch_funding_rate(symbol)
+        fr = ex.fetch_funding_rate(resolve_symbol(ex, symbol))
         rate = fr.get("fundingRate")
     except Exception:
         return "💸 Funding: n/a", 0.0
@@ -51,8 +52,9 @@ def funding_context(ex, symbol):
 
 # ---------------------------------------------------------------- 3. daily levels
 def daily_levels(ex, symbol, entry, direction):
+    from scanner import resolve_symbol
     try:
-        o = ex.fetch_ohlcv(symbol, "1d", limit=180)
+        o = ex.fetch_ohlcv(resolve_symbol(ex, symbol), "1d", limit=180)
     except Exception:
         return "🧱 Daily levels: n/a", True
     d = pd.DataFrame(o, columns=["ts", "open", "high", "low", "close", "volume"])

@@ -25,16 +25,42 @@ except ImportError:
 
 
 # ---------------------------------------------------------------- data
+def resolve_symbol(ex, base):
+    """Map a base pair like 'BTC/USDT' to the exchange's market id.
+    Perp exchanges use the unified swap form 'BTC/USDT:USDT'."""
+    if base in ex.markets:
+        return base
+    alt = base + ":USDT"
+    if alt in ex.markets:
+        return alt
+    return base
+
+
 def make_exchange():
-    ex = getattr(ccxt, C.EXCHANGE)({
-        "enableRateLimit": True,
-        "options": {"defaultType": C.MARKET_TYPE},
-    })
-    return ex
+    """Try LIVE_EXCHANGES in order; return the first that actually responds
+    (Binance is geo-blocked from US cloud, so we fall through to others)."""
+    exchanges = getattr(C, "LIVE_EXCHANGES", [C.EXCHANGE])
+    last_err = None
+    for exid in exchanges:
+        try:
+            dtype = "future" if exid == "binance" else "swap"
+            ex = getattr(ccxt, exid)({
+                "enableRateLimit": True,
+                "options": {"defaultType": dtype},
+            })
+            ex.load_markets()
+            # probe: must be able to pull candles from this location
+            ex.fetch_ohlcv(resolve_symbol(ex, C.SYMBOLS[0]), "15m", limit=2)
+            ex.chosen_id = exid
+            return ex
+        except Exception as e:
+            last_err = e
+            continue
+    raise RuntimeError(f"No reachable exchange. Last error: {last_err}")
 
 
 def fetch(ex, symbol, timeframe, limit):
-    o = ex.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+    o = ex.fetch_ohlcv(resolve_symbol(ex, symbol), timeframe=timeframe, limit=limit)
     df = pd.DataFrame(o, columns=["ts", "open", "high", "low", "close", "volume"])
     df["ts"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
     return df.set_index("ts")

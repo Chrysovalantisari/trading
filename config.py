@@ -12,9 +12,14 @@ ACCOUNT = {
     "leverage_safety_buffer": 1.5,  # keep liquidation this x further than the stop
 }
 
-# --- Exchange for public OHLCV (no API key needed) ---
+# --- Exchange for backtest/optimize data cache (local, no API key) ---
 EXCHANGE = "binance"
 MARKET_TYPE = "future"  # perp futures universe (matches leverage trading)
+
+# --- LIVE fetching (scanner/alerts). Binance geo-blocks US cloud IPs (GitHub
+# Actions runs in the US), so we try these in order and use the first that
+# responds. Keeps the alerter working wherever it is hosted. ---
+LIVE_EXCHANGES = ["binance", "bybit", "okx", "kucoinfutures", "gate", "mexc"]
 
 # --- Watchlist (major liquid crypto perps; edit freely) ---
 SYMBOLS = [
